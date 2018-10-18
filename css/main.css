@@ -1,0 +1,38 @@
+@import url('./flexy-grid.css');
+
+header{
+    background-color: darkblue;
+    color: azure;
+    padding: 1em;
+}
+
+header button{
+    background-color: darkblue;
+    color: azure;
+    border: none;
+    margin: 1rem;
+    font-size: 2em;
+    grid-column: span 1;
+}
+
+header span{
+    margin: 1rem;
+    font-size: 1em;   
+}
+
+aside{
+    font-size:1em;
+}
+aside button{
+    width: 99%;
+    margin: 0.1rem;
+    padding: 1rem;
+    border: none;
+    background-color: darkviolet;
+    color:white;
+}
+
+aside summary{
+    font-size: 1rem;
+}
+details, details > * { display:block; }
