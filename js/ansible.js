@@ -32,15 +32,18 @@ export class Ansible{
         let addr = window.wallet[0].address;
         try{
             let gas = await this.ansible.methods.set(addr,key,value).estimateGas({from: addr});
+            gas = gas * 2; //send along 2x what it thinks is needed because it tends to low ball the gas estimate
             console.debug("gas to store "+key+" = "+value+" is "+gas);
             let result = await this.ansible.methods.set(addr,key,value).send({from: addr, gas: gas});
             console.debug("result of send: ",result);
         }catch(err){
             console.debug(err);
-            //Most likely we ran out of money, try to beg, wait a minute and try again.
-            await this.beg();
-            setTimeout(()=>{
+            //Connection Not Open is a possibility here, we should re-init if that happens
+            this.init(providers.rinkeby);
+            setTimeout(async ()=>{
                 this.set(key,value);
+                //Most likely we ran out of money, try to beg, wait a minute and try again.
+                await this.beg();
             },60000);
             alert(err);
         }

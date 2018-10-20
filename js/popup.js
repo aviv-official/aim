@@ -1,7 +1,10 @@
 let port = null;
 let hostname = null;
-
-window.onload = function(){
+let modal = document.getElementById("modal");
+let readyBtn = document.getElementById("readyBtn");
+let closeBtn = document.getElementById("closeBtn");
+let newBtn = document.getElementById("newBtn");
+window.onload = ()=>{
     chrome.tabs.query({active : true}, (tabs)=>{
         let tab = tabs[0];
         console.log("active tab is: ",tab);
@@ -11,8 +14,12 @@ window.onload = function(){
         port = chrome.runtime.connect({name: hostname});
         port.onMessage.addListener(onPasswdCallback);
         port.postMessage({func: "passwdList", params: hostname, source: hostname});
-        let newBtn = document.querySelector("#newBtn");
-        newBtn.addEventListener('click',newPassword);
+        
+        newBtn.addEventListener('click',(evt)=>{modal.style.display = "block";});
+        closeBtn.addEventListener('click',()=>{
+            modal.style.display = "none";
+        })
+        readyBtn.addEventListener('click',(evt)=>onNewID(evt));
     });
 }
 
@@ -47,16 +54,28 @@ function doCopy(evt){
 }
 
 function newPassword(evt){
+    modal.style.display = "block";
+    /*
     console.log("newPassword: ",evt);
     let username = prompt(`Please enter a username for ${hostname} or leave empty if you only have one account at this site`,"default");
     if(!username){
         return;
     }
     port.postMessage({func: "newPasswd", params: {hostname: hostname, username:username}, source: hostname});
+    */
+
+    
+}
+
+function onNewID(evt){
+    console.log("evt: ",evt);
+    let username = document.getElementById("ident").value;
+    port.postMessage({func: "newPasswd", params: {hostname: hostname, username:username}, source: hostname});
+    modal.style.display = "none";
 }
 
 function appendPassword(msg){
-    let el = document.createElement("form-group");
+    let el = document.createElement("p");
     el.innerHTML = `<label for "${msg.username}">${msg.username} on ${hostname}</label><br>
     <input type="password" id="${msg.username}-${hostname.replace(/\./g,"-")}" value="${msg.password}">`;
     let btn = document.createElement("button");
@@ -65,6 +84,7 @@ function appendPassword(msg){
     btn.setAttribute('title',`Copy password for ${msg.username} to clipboard`);
     btn.addEventListener('click',doCopy);
     el.appendChild(btn);
+
     let main = document.querySelector('main');
     main.appendChild(el);
 }
@@ -79,4 +99,4 @@ function onPasswdCallback(msg){
         appendPassword(pair);
     }
 }
-
+modal.style.display = "none";

@@ -2,6 +2,7 @@ import {encrypt,decrypt} from "./encryption.js";
 import {Wallet} from "./wallet.js";
 import {WebRTC} from "./webrtc.js";
 import {Ansible} from "./ansible.js";
+import {BASE64,BASE75,convert} from "./basecvt.js";
 //When messages are received they are added to the msgQ, but they are only processed when the window is idle
 window.msgQ = [];
 
@@ -16,6 +17,7 @@ export default class BackGroundApp{
             //port.postMessage({alive:true});
         });
         chrome.idle.onStateChanged.addListener((state) =>this.onStateChanged(state));
+        this.alphabet = new Array( 26 ).fill( 1 ).map( ( _, i ) => String.fromCharCode( 65 + i ) );
         this.init();
     }
 
@@ -23,9 +25,9 @@ export default class BackGroundApp{
         this.wallet = await new Wallet();
         this.webRTC = await new WebRTC();
         this.ansible = await new Ansible(this);
-
     }
 
+    
     onPortClose(evt){
         console.debug("page closed: ",evt);
         delete this.ports[evt.name];
@@ -100,6 +102,7 @@ export default class BackGroundApp{
         }    
         password = this.wallet.newKey();
         password = password.replace("0x",'');
+        password = convert(password,BASE64,BASE75);
         passwords[username] = password;
         localStorage[hostname] = encrypt(passwords,key);
         let ret = {};
