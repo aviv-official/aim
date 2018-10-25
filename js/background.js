@@ -1,6 +1,6 @@
 import {encrypt,decrypt} from "./encryption.js";
 import {Wallet} from "./wallet.js";
-import {WebRTC} from "./webrtc.js";
+import {WebRTC} from "./webrtc-signaling.js";
 import {Ansible} from "./ansible.js";
 import {BASE64,BASE75,convert} from "./basecvt.js";
 //When messages are received they are added to the msgQ, but they are only processed when the window is idle
@@ -14,20 +14,18 @@ export default class BackGroundApp{
             port.onDisconnect.addListener((evt) => this.onPortClose(evt));
             this.ports[port.name] = port;
             port.onMessage.addListener((evt)=> this.onAppMsg(evt));
-            //port.postMessage({alive:true});
         });
         chrome.idle.onStateChanged.addListener((state) =>this.onStateChanged(state));
-        this.alphabet = new Array( 26 ).fill( 1 ).map( ( _, i ) => String.fromCharCode( 65 + i ) );
         this.init();
     }
 
     async init(){
         this.wallet = await new Wallet();
-        this.webRTC = await new WebRTC();
+        this.webRTC = await new WebRTC(this.getKey(),this);
+        this.webRTC.startup("http://18.233.9.2:8080/","lobby");
         this.ansible = await new Ansible(this);
     }
 
-    
     onPortClose(evt){
         console.debug("page closed: ",evt);
         delete this.ports[evt.name];
@@ -63,12 +61,17 @@ export default class BackGroundApp{
     }
 
     async start(){
+        let promises = [];
+        console.debug(`Have ${window.msgQ.length} messages to process`);
         while(window.idle && window.msgQ.length){
-            this.processMsg(window.msgQ.shift());
+            promises.push(this.webRTC.sendDataToPeers(window.msgQ.shift()));
         }
+        await Promise.all(promises);
         if(window.idle){
-            //console.debug("Message Q now empty");
-            await this.sleep(1000);
+            console.debug("Message Q now empty");
+            await this.sleep(10000);
+            let ping = await this.timeNow();
+            window.msgQ.push(ping);
             this.start();
         }
     }
@@ -146,23 +149,6 @@ export default class BackGroundApp{
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async fetchNodeList(){
-        console.debug("Requesting updated list of active nodes...");
-        let params = {
-            method: 'GET',
-            cache: 'default'
-        };
-        let response = await fetch("https://0hidwxfvzg.execute-api.us-east-1.amazonaws.com/Prod/register",params);
-        //console.log(response);
-        let nodeList;
-        if(response.ok){
-            nodeList = await response.json();
-        }
-        console.debug("Active Nodes: ",nodeList);
-        localStorage['nodeList'] = JSON.stringify(nodeList);
-        //TODO: Open a listener and attempt to connect to nodes in nodeList
-    }
-    
     async updateProgress(value){
         window.loadProgress = value;
         notifyOptions.progress = value;
@@ -175,10 +161,101 @@ export default class BackGroundApp{
             console.debug("progress: ",value);
         }
     }
+
+    async timeNow(){
+        return await this.prepMsg({ping: Date.now()});
+    }
+
+    async prepMsg(msg){
+        if(msg.id){
+            msg.topic = msg.id;
+            delete msg.id;
+        }
+        if(!msg.version){
+            msg.version = "1.0";
+        }
+        if(!msg.authority){
+            msg.authority = [];
+        }
+        msg.worker = window.wallet[0].address;
+        msg.id = await this.obj2ID(msg);
+        if(!msg.topic){
+            msg.topic = msg.id;
+        }
+        let poa = {
+            id : msg.topic+"."+msg.id+"."+Date.now(),
+            signer : window.wallet[0].address
+        };
+        poa.sig = await this.wallet.web3.eth.sign(poa.id,poa.signer);
+        msg.authority.push(poa);
+        return msg;
+    }
+
+    async verifyMsg(msg){
+        switch(msg.version){
+            case "1.0" : {
+                return await this.verifyV1_0(msg);
+            }
+        }
+        return false;
+    }
+
+    async verifyV1_0(msg){
+        
+        //Step 1: Verify the sig matches the id for most recent poa
+        let poa = msg.authority[msg.authority.length-1];
+        let sig = poa.sig;
+        let id = poa.id;
+        let signer = poa.signer;
+        let msgId = poa.id.split('.')[1];
+        let isValid = (msgId == msg.id);
+        if(isValid){
+            isValid = await this.sigVerify1_0(id,sig,signer);
+            if(isValid){
+                //Step 2: Verify the hash matches the content sans meta-data
+                id = await this.obj2ID(msg);
+                isValid = (msg.id == id);
+                if(!isValid){
+                    console.debug("id does not match contents");
+                }
+            }else{
+                console.debug("signature verification failed");
+            }
+        }else{
+            console.debug("msg.id mistmatch");
+        }
+        return isValid;
+    }
+
+    async sigVerify1_0(msg,sig,addr){
+        try{
+            let fromAddr = await window.web3.eth.accounts.recover(msg,sig);
+            return fromAddr == addr;
+        }catch(err){
+            console.debug(err);
+            return false;
+        }
+    }
+
+    async obj2ID(obj){
+        let cpy = Object.assign({},obj);
+        delete cpy.id;
+        delete cpy.topic;
+        delete cpy.authority;
+        delete cpy.worker;
+        delete cpy.version;
+        let props = Object.getOwnPropertyNames(cpy);
+        props = props.sort();
+        let val = "";
+        for(let propName of props){            
+            val += `${propName}=${JSON.stringify(cpy[propName])}`;
+        }
+        console.debug("val: ",val);
+        let id = await this.wallet.web3.utils.soliditySha3(val);
+        console.debug("id: ",id);
+        return id;
+    }
 }
 
 window.backgroundApp = new BackGroundApp();
 window.backgroundApp.start();
-setInterval(async()=>{
-    window.backgroundApp.fetchNodeList();
-},1000 * 60 * 60);

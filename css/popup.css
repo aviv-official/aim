@@ -1,12 +1,14 @@
 @import url('./flexy-grid.css');
 body{
     width: 320px;
+    height: 500px;
 }
 
 header{
     background-color: darkblue;
     color: azure;
     padding: 1em;
+    height: 4em;
 }
 
 header button{

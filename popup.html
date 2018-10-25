@@ -11,24 +11,25 @@
             <h4 class="col-10">AVIV Identity Manager</h4>
         </header>
         <main>
+            <!-- Modal content -->
+        <div id="modal" class="modal-content col-12">
+                <div class="modal-header">
+                <span id="closeBtn" class="close">&times;</span>
+                <h2>New Identity</h2>
+                </div>
+                <div class="modal-body">
+                    <p>Enter a username for this site</p>
+                    <p><input id="ident" value="default"></p>
+                </div>
+                <div class="modal-footer">
+                <h3><button id="readyBtn">Ready!</button></h3>
+                </div>
+            </div>
         </main>
         <footer>
             &copy;2018 AVIV Holdings
         </footer>
-        <!-- Modal content -->
-        <div id="modal" class="modal-content col-12">
-            <div class="modal-header">
-            <span id="closeBtn" class="close">&times;</span>
-            <h2>New Identity</h2>
-            </div>
-            <div class="modal-body">
-                <p>Enter a username for this site</p>
-                <p><input id="ident" value="default"></p>
-            </div>
-            <div class="modal-footer">
-            <h3><button id="readyBtn">Ready!</button></h3>
-            </div>
-        </div>
+        
     </body>
     <script src="./js/popup.js"></script>
   </html>

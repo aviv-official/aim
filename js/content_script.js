@@ -2,7 +2,6 @@ let hostname = document.location.hostname;
 console.log("aviv: ",hostname);
 let port = chrome.runtime.connect({name: hostname});
 
-
 function addToClipboard(value){
     navigator.permissions.query({name: "clipboard-write"}).then(result => {
         if (result.state == "granted" || result.state == "prompt") {
