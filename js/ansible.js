@@ -5,10 +5,12 @@ const providers = {
 export class Ansible{
     constructor(app){
         this.app = app;
-        this.init(providers.rinkeby);
+        this.provider = providers.rinkeby;
+        this.init(this.provider);
     }
     async init(provider){
         try{
+            this.provider = provider;
             this.web3 = this.app.wallet.web3;
             let ansibleABI = await(await fetch('./js/ansible.abi.json')).json();
             this.ansible = await new this.web3.eth.Contract(ansibleABI,ansibleAddr);
@@ -18,6 +20,7 @@ export class Ansible{
             let params = {fromBlock : fromBlock};
             let events = await this.ansible.getPastEvents("ValueSet",params);
             this.onEvent(events);
+            window.ping = setInterval(()=>{this.ping()},60000);
         }catch(err){
             console.debug(err);
             setTimeout(()=>{
@@ -59,6 +62,16 @@ export class Ansible{
         return val; 
     }
 
+    async ping(){
+        try{
+            let result = await this.get("/",window.wallet[0].address);
+            console.debug("ansible ping: OK!");
+        }catch(err){
+            console.debug("disconnect detected, awaiting reconnect: ",err);
+            window.clearInterval(window.ping);
+            this.init(this.provider);
+        }
+    }
     async onEvent(evts){
         console.debug("evt: ",evts);
         if(evts.length){

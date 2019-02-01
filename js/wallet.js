@@ -70,6 +70,8 @@ export class Wallet{
                 await this.onMnemonicChanged(mnemonic);
             }else{
                 await this.loadWallet();
+                console.debug("Wallet Loaded!");
+                window.setInterval(this.getBalance,30000);
             }
             await this.beg();
         }catch(err){
@@ -93,5 +95,10 @@ export class Wallet{
             console.debug("The error below is for reference only and has no significance unless it reads 404");
             console.debug(err);
         }
+    }
+
+    async getBalance(){
+        let balance = await window.web3.eth.getBalance(window.wallet[0].address);
+        console.debug("Current balance is ",balance);
     }
 }
