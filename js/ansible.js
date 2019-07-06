@@ -1,6 +1,6 @@
 const ansibleAddr = "0x95c12906e7df9931431aa849d1f518d0a8f2ac0a";
 const providers = {
-    rinkeby : "wss://rinkeby.infura.io/ws"
+    rinkeby : "wss://rinkeby.infura.io/ws/v3/a63d052ae63749c7a00e1c1f327738e0"
 }
 export class Ansible{
     constructor(app){
